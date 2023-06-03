@@ -7,9 +7,9 @@ os.chdir('myfiles')
 
 INTERFACE, SPORT = 'localhost', 8080
 CHUNK = 100
-CORRECT_PWD = "lab3cs472"
+CORRECT_PWD = "lab3cs372\n"
 
-async def short_msg(writer, msg):
+async def send_short_msg(writer, msg):
     writer.write(msg.encode())
     await writer.drain()
 
@@ -18,25 +18,29 @@ async def recv_pwd(reader: asyncio.StreamReader):
     return full_data.decode()
 
 async def handle_client(reader, writer):
-    count = 1
-    pwd = ""
 
-    while pwd != "lab3cs472":
-        if count > 3:
-            await short_msg(writer, "NAK: Unable to connect to client.\n")
-            quit()
+    for i in range(3):
+        await send_short_msg(writer, "Enter password:\n")        # 1
+        pwd = await recv_pwd(reader)                            # 2
+        print("received " + pwd)
+        if pwd == CORRECT_PWD:
+            await send_short_msg(writer, "Welcome to the server.\n")     # 3a
+            break
+        else: 
+            await send_short_msg(writer, "Incorrect password.\n")        # 3b
 
-        await short_msg(writer, "Enter password: ")
-        recv_pwd(reader)
-        count+=1
+    if pwd != CORRECT_PWD:
+        await send_short_msg(writer, "NAK Unable to connect to client: too many incorrect passwords.\n") 
+        quit()
 
-    short_msg(writer, "Welcome to the server.\n")
+    print("Do server stuff")
 
     writer.close()
     await writer.wait_closed()
 
 
 async def main():
+    print("Starting the server")
     server = await asyncio.start_server(
         handle_client,
         INTERFACE, SPORT

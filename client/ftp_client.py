@@ -12,28 +12,29 @@ async def recv_short_msg(reader: asyncio.StreamReader):
     full_data = await reader.readline()
     return full_data.decode()
 
-async def send_pwd(writer):
-    pwd = input()
-
+async def send_pwd(writer, pwd):
     writer.write(pwd.encode())
     await writer.drain()
 
 async def connect(i):
     reader, writer = await asyncio.open_connection(IP, DPORT)
 
-    intro = await recv_short_msg(reader)
-    print(intro)
-
-    while recv_short_msg(reader) != "Welcome to the server.\n":
-        recv_short_msg(reader)
-        await send_pwd(writer)
-
-
+    for i in range(3):
+        pwd_prompt = await recv_short_msg(reader)       # 1
+        print(pwd_prompt)
+        pwd = input()
+        await send_pwd(writer, pwd+"\n")                     # 2
+        
+        confirm = await recv_short_msg(reader)          # 3
+        if confirm == "Welcome to the server.\n":
+            break 
+ 
+    print(confirm)
     return 0
 
 async def main():
     tasks = []
-    for i in range(100):
+    for i in range(1):
         tasks.append(connect(str(i).rjust(8, '0')))
 
     await asyncio.gather(*tasks)
