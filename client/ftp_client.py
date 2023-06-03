@@ -16,6 +16,10 @@ async def send_pwd(writer, pwd):
     writer.write(pwd.encode())
     await writer.drain()
 
+async def send_func(writer, func):
+    writer.write(func.encode())
+    await writer.drain()
+
 async def connect(i):
     reader, writer = await asyncio.open_connection(IP, DPORT)
 
@@ -30,6 +34,13 @@ async def connect(i):
             break 
  
     print(confirm)
+    while confirm != "Close":
+        func_prompt = await recv_short_msg(reader)
+        print (func_prompt)
+        func = input()
+        await send_func(writer, func+"\n")
+        confirm = await recv_short_msg(reader)
+
     return 0
 
 async def main():
