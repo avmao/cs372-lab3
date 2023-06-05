@@ -46,9 +46,28 @@ async def connect(i):
         func_prompt = await recv_msg(reader)            # 4
         print (func_prompt.strip() + " " , end="")
         func = input()
-        await send_msg(writer, func)                    # 5
-        contents = await recv_msg(reader)               # 6
-        print(contents)
+        command = func.split(" ")
+        await send_msg(writer, func)   
+        contents = await recv_msg(reader)
+        print(contents)  
+        if command[0] == "get":
+            file_name = command[1]
+            confirmfile = await recv_msg(reader)
+            if confirmfile == "ACK\n":
+                f = open(file_name, "w")
+                file_contents = await recv_msg(reader)
+                f.write(file_contents)   
+                f.close()      
+        elif command[0] == "put":
+            file_to_put = command[1]
+            check = os.path.isfile(file_to_put)
+            if check: 
+                with open(file_to_put, 'r') as send:
+                    content = send.read()
+                    await send_msg(writer, content)
+                    #file_to_put.close()
+            else:
+                print("NAK File does not exist.\n")
 
     return 0
 

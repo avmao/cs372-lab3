@@ -10,8 +10,8 @@ CHUNK = 100
 CORRECT_PWD = "a\n"
 PATH = os.getcwd()
 LIST_FILES = "list"
-PUT_FILE = "put file\n"
-GET_FILE = "get file\n"
+PUT_FILE = "put"
+GET_FILE = "get"
 REMOVE_FILE = "remove"
 CLOSE = "close"
 
@@ -31,16 +31,6 @@ async def recv_msg(reader: asyncio.StreamReader):
 
     full_data = await reader.readexactly(data_length)
     return full_data.decode()
-
-async def put_func(reader: asyncio.StreamReader):
-    print("Put")
-
-async def get_func(reader: asyncio.StreamReader):
-    print("Get")
-
-async def remove_func(reader: asyncio.StreamReader):
-    print("Remove")
-
 
 async def handle_client(reader, writer):
 
@@ -63,18 +53,38 @@ async def handle_client(reader, writer):
         input = await recv_msg(reader)                            # 5 
         fcn = input.split(" ",1)
         print("received " + str(fcn))
-        if fcn[0] == LIST_FILES:
+        if fcn[0] == LIST_FILES:    # List files in server's directory
             dir_list = os.listdir(PATH)
             await send_msg(writer, "ACK\n" + str(dir_list))         # 6a
-        elif fcn[0] == PUT_FILE:
-            put_func(reader)                                    # 6b
-        elif fcn[0] == GET_FILE:
-            get_func(reader)                                    # 6c
-        elif fcn[0] == REMOVE_FILE:
-            os.remove(fcn[1])                                     # 6d
-            print("removed " + fcn[1])
+        elif fcn[0] == PUT_FILE:        #6b Uploads file from client to server
+            file_to_put = fcn[1]
+            print("received " + file_to_put)
             await send_msg(writer, "ACK\n")
-        elif fcn[0] == CLOSE:
+            f = open(file_to_put, "w")
+            file_contents = await recv_msg(reader)
+            f.write(file_contents)   
+            f.close()                        
+        elif fcn[0] == GET_FILE:    #Downloads file from server to client
+            file_to_send = fcn[1]
+            print("received " + file_to_send)
+            check = os.path.isfile(file_to_send)
+            if check: 
+                await send_msg(writer, "ACK\n")
+                with open(file_to_send, 'r') as send:
+                    content = send.read()
+                    await send_msg(writer, content)
+                    #file_to_send.close()
+            else:
+                await send_msg(writer, "NAK File does not exist.\n") 
+        elif fcn[0] == REMOVE_FILE:     # Removes file on server
+            checkpath = os.path.isfile(fcn[1])
+            if checkpath: 
+                os.remove(fcn[1])                                     # 6d
+                print("removed " + fcn[1])
+                await send_msg(writer, "ACK\n")
+            else:
+                await send_msg(writer, "NAK File does not exist.\n")
+        elif fcn[0] == CLOSE:       # Closes server
             asyncio.get_event_loop().stop()                     # 6e
             break
         else:
