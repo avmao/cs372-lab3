@@ -47,27 +47,47 @@ async def connect(i):
         print (func_prompt.strip() + " " , end="")
         func = input()
         command = func.split(" ")
-        await send_msg(writer, func)   
-        contents = await recv_msg(reader)
-        print(contents)  
-        if command[0] == "get":
-            file_name = command[1]
-            confirmfile = await recv_msg(reader)
-            if confirmfile == "ACK\n":
-                f = open(file_name, "w")
-                file_contents = await recv_msg(reader)
-                f.write(file_contents)   
-                f.close()      
-        elif command[0] == "put":
-            file_to_put = command[1]
-            check = os.path.isfile(file_to_put)
-            if check: 
-                with open(file_to_put, 'r') as send:
+
+        if command[0] == "put" and not os.path.isfile(command[1]):
+            print("NAK File does not exist.\n")
+            await send_msg(writer, "NAK")           # 5 send invalid command i guess
+            ack = await recv_msg(reader)
+
+        else:
+            await send_msg(writer, func)                    # 5 send command
+
+            if command[0] == "list":
+                contents = await recv_msg(reader)               # 6
+                print(contents) 
+
+            elif command[0] == "put":
+                ack = await recv_msg(reader)               # 7a
+                print(ack) 
+
+                with open(command[1], 'r') as send:
                     content = send.read()
-                    await send_msg(writer, content)
+                    await send_msg(writer, content)             # 7b
                     #file_to_put.close()
+
+            elif command[0] == "get":
+                ack = await recv_msg(reader)               # 8a
+                print(ack) 
+
+                file_name = command[1]
+                if ack == "ACK\n":
+                    f = open(file_name, "w")
+                    file_contents = await recv_msg(reader)      # 8b
+                    f.write(file_contents)   
+                    f.close()
+            
+            elif command[0] == "remove":
+                ack = await recv_msg(reader)               # 9
+                print(ack)      
+
             else:
-                print("NAK File does not exist.\n")
+                ack = await recv_msg(reader)
+                print(ack)
+        
 
     return 0
 
